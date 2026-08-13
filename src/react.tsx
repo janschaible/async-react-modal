@@ -1,61 +1,23 @@
 import {
-  useSyncExternalStore,
   type ComponentType,
   type MouseEvent,
-  type PropsWithChildren,
   type ReactElement,
 } from "react";
-import { ModalDismissedError, type ModalProps } from "./index";
-
-type AnyProps = object;
-const EMPTY_ENTRIES: Entry[] = [];
-
-type Entry = {
-  id: number;
-  component: ComponentType<any>;
-  props: AnyProps;
-  resolve(value: unknown): void;
-  reject(reason?: unknown): void;
-};
-
-let nextId = 0;
-let entries: Entry[] = [];
-const listeners = new Set<() => void>();
-
-function emit(): void {
-  listeners.forEach((listener) => listener());
-}
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function remove(id: number): Entry | undefined {
-  const entry = entries.find((candidate) => candidate.id === id);
-  if (!entry) return undefined;
-
-  entries = entries.filter((candidate) => candidate.id !== id);
-  emit();
-  return entry;
-}
-
-function settle(id: number, action: (entry: Entry) => void): void {
-  const entry = remove(id);
-  if (entry) action(entry);
-}
-
-export type AsyncModalComponent<Input extends object, Output> = ComponentType<
-  ModalProps<Input, Output>
->;
-
-export type AsyncModalBackdropProps = PropsWithChildren<{
-  dismiss(): void;
-}>;
-
-export type AsyncModalHostProps = {
-  backdrop?: ComponentType<AsyncModalBackdropProps>;
-};
+import {
+  assertModalHostMounted,
+  useEscapeDismissal,
+  useHostRegistration,
+  useModalEntries,
+} from "./hooks";
+import { addEntry, settleEntry } from "./store";
+import type {
+  AsyncModalBackdropProps,
+  AsyncModalHostProps,
+  CallerModalProps,
+  ModalInput,
+  ModalOutput,
+  ModalProps,
+} from "./types";
 
 function DefaultBackdrop({
   children,
@@ -67,8 +29,9 @@ function DefaultBackdrop({
 
   return (
     <div
-      data-async-modal-backdrop=""
+      data-async-react-modal-backdrop=""
       onMouseDown={handleMouseDown}
+      role="presentation"
       style={{
         alignItems: "center",
         background: "rgb(0 0 0 / 50%)",
@@ -85,57 +48,64 @@ function DefaultBackdrop({
   );
 }
 
-function show<Props extends AnyProps, Result>(
-  component: AsyncModalComponent<Props, Result>,
-  props: Props,
-): Promise<Result> {
-  return new Promise<Result>((resolve, reject) => {
-    entries = [
-      ...entries,
-      {
-        id: ++nextId,
-        component,
-        props: props as Record<string, unknown>,
-        resolve: resolve as (value: unknown) => void,
-        reject,
-      },
-    ];
-    emit();
+function show<Component extends ComponentType<any>>(
+  component: Component,
+  props: CallerModalProps<ModalInput<Component>>,
+): Promise<ModalOutput<Component> | undefined> {
+  assertModalHostMounted();
+
+  return new Promise<ModalOutput<Component> | undefined>((resolve, reject) => {
+    addEntry({
+      component,
+      props,
+      resolve: resolve as (value: unknown) => void,
+      reject,
+      previouslyFocusedElement:
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : undefined,
+    });
   });
 }
 
-function Host({ backdrop: Backdrop = DefaultBackdrop }: AsyncModalHostProps) {
-  const snapshot = useSyncExternalStore(
-    subscribe,
-    () => entries,
-    () => EMPTY_ENTRIES,
-  );
+function Host({
+  backdrop: Backdrop = DefaultBackdrop,
+  dismissOnEscape = true,
+}: AsyncModalHostProps) {
+  const snapshot = useModalEntries();
+  useHostRegistration();
+  useEscapeDismissal(dismissOnEscape);
+
+  const entry = snapshot[0];
+
+  if (!entry) {
+    return <div data-async-react-modal-host="" />;
+  }
+
+  const Component = entry.component;
+  const controls: ModalProps<object, unknown> = {
+    resolve: (value) =>
+      settleEntry(entry.id, (current) => current.resolve(value)),
+    reject: (reason) =>
+      settleEntry(entry.id, (current) => current.reject(reason)),
+    dismiss: () =>
+      settleEntry(entry.id, (current) => current.resolve(undefined)),
+  };
 
   return (
-    <div data-async-modal-host="">
-      {snapshot.map((entry) => {
-        const Component = entry.component;
-        const controls: ModalProps<object, unknown> = {
-          resolve: (value) =>
-            settle(entry.id, (current) => current.resolve(value)),
-          reject: (reason) =>
-            settle(entry.id, (current) => current.reject(reason)),
-          dismiss: () =>
-            settle(entry.id, (current) =>
-              current.reject(new ModalDismissedError()),
-            ),
-        };
-
-        return (
-          <Backdrop key={entry.id} dismiss={controls.dismiss}>
-            <Component {...entry.props} {...controls} />
-          </Backdrop>
-        );
-      })}
+    <div data-async-react-modal-host="">
+      <Backdrop dismiss={controls.dismiss}>
+        <Component {...entry.props} {...controls} />
+      </Backdrop>
     </div>
   );
 }
 
 export const AsyncModal = { show, Host };
 export { DefaultBackdrop };
-export { ModalDismissedError, type ModalProps } from "./index";
+export type {
+  AsyncModalBackdropProps,
+  AsyncModalComponent,
+  AsyncModalHostProps,
+  ModalProps,
+} from "./types";

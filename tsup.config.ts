@@ -1,9 +1,9 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts", "src/react.tsx"],
+  entry: ["src/react.tsx"],
   format: ["esm"],
   dts: true,
   clean: true,
-  external: ["react", "react-dom"],
+  external: ["react"],
 });

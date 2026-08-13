@@ -1,4 +1,4 @@
-# async-modal
+# async-react-modal
 
 Promise-based modal orchestration with React adapter.
 
@@ -6,9 +6,8 @@ Promise-based modal orchestration with React adapter.
 import { useState } from "react";
 import {
   AsyncModal,
-  ModalDismissedError,
   type ModalProps,
-} from "async-modal/react";
+} from "async-react-modal";
 
 type ConfirmModalProps = {
   itemName: string;
@@ -23,7 +22,7 @@ function ConfirmModal({
   resolve,
 }: ModalProps<ConfirmModalProps, ConfirmModalResult>) {
   return (
-    <dialog aria-labelledby="confirm-title" open>
+    <dialog aria-labelledby="confirm-title" aria-modal="true" open>
       <h2 id="confirm-title">Delete {itemName}?</h2>
       <p>This is only a demo. Nothing important will be removed.</p>
 
@@ -37,21 +36,17 @@ function App() {
   const [status, setStatus] = useState("Nothing has happened yet.");
 
   async function askToDelete() {
-    try {
-      const result = await AsyncModal.show(ConfirmModal, {
-        itemName: "quarterly-report.pdf",
-      });
+    const result = await AsyncModal.show(ConfirmModal, {
+      itemName: "quarterly-report.pdf",
+    });
 
-      // `result` is inferred as ConfirmModalResult.
-      setStatus(result.accepted ? "Deleted!" : "Kept safely.");
-    } catch (error) {
-      if (error instanceof ModalDismissedError) {
-        setStatus("Dismissed by clicking the default backdrop.");
-        return;
-      }
-
-      throw error;
+    // Dismissing via the backdrop or Escape returns undefined.
+    if (result === undefined) {
+      setStatus("Dismissed.");
+      return;
     }
+
+    setStatus(result.accepted ? "Deleted!" : "Kept safely.");
   }
 
   return (
@@ -64,8 +59,14 @@ function App() {
 }
 ```
 
-React is a peer dependency and is not included in the package bundle. Import the
-React API from `async-modal/react`.
+React is a peer dependency and is not included in the package bundle.
+
+`<AsyncModal.Host />` must be mounted before calling `AsyncModal.show()`. A call
+without a mounted host throws immediately instead of returning a promise that can
+never settle. Mount exactly one host in the application.
+
+If the host unmounts while modals are open, their pending calls are dismissed and
+resolve with `undefined`.
 
 ## Custom backdrop
 
@@ -76,7 +77,7 @@ you can replace it once for all modals rendered by that host:
 import {
   AsyncModal,
   type AsyncModalBackdropProps,
-} from "async-modal/react";
+} from "async-react-modal";
 
 function MyBackdrop({ children, dismiss }: AsyncModalBackdropProps) {
   return (
@@ -89,8 +90,16 @@ function MyBackdrop({ children, dismiss }: AsyncModalBackdropProps) {
 <AsyncModal.Host backdrop={MyBackdrop} />;
 ```
 
-The modal components themselves only render their content. A backdrop receives
-the modal as `children` and a `dismiss()` callback.
+## Behavior
+
+- Modal components only render their content.
+- A backdrop receives the modal as `children` and a `dismiss()` callback.
+- Pressing Escape dismisses the active modal by default. Disable this with
+  `<AsyncModal.Host dismissOnEscape={false} />`.
+- Multiple calls to `show()` are queued in first-in, first-out order. Only one
+  modal is rendered at a time.
+- Focus returns to the element that was active when the modal opened after it
+  settles.
 
 ## Run the example
 
@@ -101,3 +110,6 @@ npm run example
 ```
 
 Then open <http://localhost:4173>.
+
+The development toolchain and CI use Node.js 22. The published library supports
+Node.js 18 and newer.

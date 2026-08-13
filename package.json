@@ -1,7 +1,7 @@
 {
-  "name": "async-modal",
+  "name": "async-react-modal",
   "version": "0.1.0",
-  "description": "Promise-based modal orchestration with React adapter",
+  "description": "Type-safe promise-based modals for React",
   "type": "module",
   "sideEffects": false,
   "files": [
@@ -9,10 +9,6 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./react": {
       "types": "./dist/react.d.ts",
       "import": "./dist/react.js"
     }
@@ -21,6 +17,7 @@
     "build": "tsup",
     "build:example": "npm run build && vite build example --outDir dist",
     "example": "npm run build && vite example --port 4173",
+    "prepublishOnly": "npm test && npm run typecheck && npm run build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -30,6 +27,7 @@
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "jsdom": "^29.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tsup": "^8.0.0",

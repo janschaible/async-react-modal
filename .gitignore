@@ -3,3 +3,4 @@ dist
 example/dist
 coverage
 *.tgz
+.implementation-plan.md
