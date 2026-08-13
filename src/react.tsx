@@ -1,4 +1,6 @@
 import {
+  memo,
+  useMemo,
   type ComponentType,
   type MouseEvent,
   type ReactElement,
@@ -18,6 +20,35 @@ import type {
   ModalOutput,
   ModalProps,
 } from "./types";
+
+type ModalRendererProps = {
+  backdrop: ComponentType<AsyncModalBackdropProps>;
+  entry: ReturnType<typeof useModalEntries>[number];
+};
+
+const ModalRenderer = memo(function ModalRenderer({
+  backdrop: Backdrop,
+  entry,
+}: ModalRendererProps): ReactElement {
+  const controls = useMemo<ModalProps<object, unknown>>(
+    () => ({
+      resolve: (value) =>
+        settleEntry(entry.id, (current) => current.resolve(value)),
+      reject: (reason) =>
+        settleEntry(entry.id, (current) => current.reject(reason)),
+      dismiss: () =>
+        settleEntry(entry.id, (current) => current.resolve(undefined)),
+    }),
+    [entry.id],
+  );
+  const Component = entry.component;
+
+  return (
+    <Backdrop dismiss={controls.dismiss}>
+      <Component {...entry.props} {...controls} />
+    </Backdrop>
+  );
+});
 
 function DefaultBackdrop({
   children,
@@ -82,21 +113,9 @@ function Host({
     return <div data-async-react-modal-host="" />;
   }
 
-  const Component = entry.component;
-  const controls: ModalProps<object, unknown> = {
-    resolve: (value) =>
-      settleEntry(entry.id, (current) => current.resolve(value)),
-    reject: (reason) =>
-      settleEntry(entry.id, (current) => current.reject(reason)),
-    dismiss: () =>
-      settleEntry(entry.id, (current) => current.resolve(undefined)),
-  };
-
   return (
     <div data-async-react-modal-host="">
-      <Backdrop dismiss={controls.dismiss}>
-        <Component {...entry.props} {...controls} />
-      </Backdrop>
+      <ModalRenderer key={entry.id} backdrop={Backdrop} entry={entry} />
     </div>
   );
 }

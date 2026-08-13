@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, useEffect, type ReactElement } from "react";
+import { act, useEffect, useState, type ReactElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import {
@@ -133,6 +133,51 @@ test("queues modal calls and Escape dismisses the active modal", async () => {
 
   click("button:nth-of-type(3)");
   await expect(second).resolves.toBeUndefined();
+});
+
+test("remounts the same component for each queued entry", async () => {
+  function StatefulModal({ label, resolve }: TestModalProps) {
+    const [value] = useState(label);
+
+    return <button onClick={() => resolve(value)}>{value}</button>;
+  }
+
+  render(<AsyncModal.Host />);
+
+  let first!: Promise<string | undefined>;
+  let second!: Promise<string | undefined>;
+  act(() => {
+    first = AsyncModal.show(StatefulModal, { label: "Bob" });
+    second = AsyncModal.show(StatefulModal, { label: "Ada" });
+  });
+
+  expect(container.textContent).toBe("Bob");
+  click("button");
+  await expect(first).resolves.toBe("Bob");
+
+  expect(container.textContent).toBe("Ada");
+  click("button");
+  await expect(second).resolves.toBe("Ada");
+});
+
+test("does not rerender the active modal when another modal is queued", () => {
+  const renderCount = vi.fn();
+
+  function CountedModal(props: TestModalProps) {
+    renderCount();
+    return <TestModal {...props} />;
+  }
+
+  render(<AsyncModal.Host />);
+  act(() => {
+    void AsyncModal.show(CountedModal, { label: "First" });
+  });
+  expect(renderCount).toHaveBeenCalledTimes(1);
+
+  act(() => {
+    void AsyncModal.show(CountedModal, { label: "Second" });
+  });
+  expect(renderCount).toHaveBeenCalledTimes(1);
 });
 
 test("restores focus after the modal settles", async () => {
