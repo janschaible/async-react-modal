@@ -4,6 +4,7 @@ export default defineConfig({
   entry: ["src/react.tsx"],
   format: ["esm"],
   dts: true,
+  sourcemap: true,
   clean: true,
   external: ["react"],
 });
