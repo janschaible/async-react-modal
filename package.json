@@ -2,6 +2,22 @@
   "name": "async-react-modal",
   "version": "0.1.0",
   "description": "Type-safe promise-based modals for React",
+  "author": "Jan Schaible",
+  "keywords": [
+    "react",
+    "modal",
+    "async",
+    "promise",
+    "dialog"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/janschaible/async-react-modal.git"
+  },
+  "homepage": "https://github.com/janschaible/async-react-modal#readme",
+  "bugs": {
+    "url": "https://github.com/janschaible/async-react-modal/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "files": [
@@ -24,6 +40,9 @@
   },
   "peerDependencies": {
     "react": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
