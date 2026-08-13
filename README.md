@@ -1,5 +1,8 @@
 # async-react-modal
 
+[![main build](https://img.shields.io/github/actions/workflow/status/janschaible/async-react-modal/ci.yml?branch=main&label=main)](https://github.com/janschaible/async-react-modal/actions/workflows/ci.yml?query=branch%3Amain)
+[![dev build](https://img.shields.io/github/actions/workflow/status/janschaible/async-react-modal/ci.yml?branch=dev&label=dev)](https://github.com/janschaible/async-react-modal/actions/workflows/ci.yml?query=branch%3Adev)
+
 Promise-based modal orchestration with React adapter.
 
 ```tsx
