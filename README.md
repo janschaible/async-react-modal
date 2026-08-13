@@ -5,6 +5,16 @@
 
 Promise-based modal orchestration with React adapter.
 
+## Installation
+
+```sh
+npm install async-react-modal
+```
+
+React 18 or newer is required as a peer dependency.
+
+## Usage
+
 ```tsx
 import { useState } from "react";
 import {
